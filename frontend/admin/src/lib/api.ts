@@ -13,10 +13,10 @@ export async function getSystemStatus(): Promise<SystemStatus> {
   if (
     v.service !== "university-bot" ||
     v.stage !== 4 ||
-    !["development", "test"].includes(String(v.environment)) ||
+    !["development", "test", "production"].includes(String(v.environment)) ||
     typeof v.databaseReady !== "boolean" ||
     typeof v.authenticationReady !== "boolean" ||
-    v.botConnected !== false
+    typeof v.botConnected !== "boolean"
   )
     throw new Error("invalid_status");
   return value as SystemStatus;

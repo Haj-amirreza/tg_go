@@ -849,11 +849,10 @@ export interface components {
             /** @constant */
             stage: 4;
             /** @enum {string} */
-            environment: "development" | "test";
+            environment: "development" | "test" | "production";
             databaseReady: boolean;
             authenticationReady: boolean;
-            /** @constant */
-            botConnected: false;
+            botConnected: boolean;
         };
     };
     responses: {

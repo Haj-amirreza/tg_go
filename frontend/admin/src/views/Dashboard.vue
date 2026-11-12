@@ -15,19 +15,29 @@ onMounted(() => system.refresh());
     <div>
       <p class="eyebrow">زیرساخت تازه، همان همراه دانشگاه</p>
       <h1>
-        {{ current.id === "overview" ? "آماده برای قدم بعدی" : current.name }}
+        {{
+          current.id === "overview"
+            ? system.status?.environment === "production"
+              ? "همراه دانشگاه"
+              : "آماده برای قدم بعدی"
+            : current.name
+        }}
       </h1>
       <p class="muted">{{ current.text }}</p>
     </div>
-    <span class="pill">پیش‌نمایش توسعه</span>
+    <span class="pill">{{
+      system.status?.environment === "production"
+        ? "وضعیت سرویس‌ها"
+        : "پیش‌نمایش توسعه"
+    }}</span>
   </div>
-  <section class="notice" aria-label="وضعیت انتقال">
+  <section class="notice" aria-label="وضعیت سرویس‌ها">
     <span class="notice-icon">↗</span>
     <div>
-      <strong>نسخهٔ جدید در حال ساخت است</strong>
+      <strong>وضعیت همراه دانشگاه</strong>
       <p>
-        ابزارهای منتقل‌شده از پنل مدیریت در دسترس‌اند. اطلاعات نصب عملیاتی هنوز
-        منتقل نشده و اتصال ربات واقعی فعال نیست.
+        وضعیت اتصال سرویس‌ها از همین نصب دریافت می‌شود. ابزارهای مدیریت پس از
+        ورود با حساب مجاز در دسترس‌اند.
       </p>
     </div>
   </section>
@@ -55,12 +65,22 @@ onMounted(() => system.refresh());
       ><small>اتصال و migration پایه</small>
     </article>
     <article class="metric">
-      <span>انتقال داده‌ها</span><strong>انجام نشده</strong
-      ><small>دادهٔ عملیاتی در این پنل نیست</small>
+      <span>سرویس مدیریت</span
+      ><strong>{{
+        system.status
+          ? system.status.authenticationReady
+            ? "آماده"
+            : "نیازمند تنظیم"
+          : "—"
+      }}</strong
+      ><small>دسترسی با حساب مجاز</small>
     </article>
     <article class="metric">
-      <span>اتصال ربات</span><strong>غیرفعال</strong
-      ><small>رفتار نسخهٔ اصلی تغییر نکرده</small>
+      <span>اتصال ربات</span
+      ><strong>{{
+        system.status ? (system.status.botConnected ? "فعال" : "غیرفعال") : "—"
+      }}</strong
+      ><small>وضعیت تنظیمات و صف همین نصب</small>
     </article>
   </div>
   <div class="content-grid">
@@ -137,7 +157,8 @@ onMounted(() => system.refresh());
         {{ system.loading ? "در حال بررسی…" : "بررسی دوباره اتصال" }}
       </button>
       <p v-if="system.failed" class="error" role="alert">
-        اتصال به سرویس برقرار نشد. سرویس محلی را بررسی کنید.
+        اتصال به سرویس برقرار نشد. تنظیمات دامنه، پورت و سلامت سرور را بررسی
+        کنید.
       </p>
     </section>
   </div>

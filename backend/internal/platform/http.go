@@ -24,6 +24,26 @@ type Checker func(context.Context) error
 
 var versionedAsset = regexp.MustCompile(`^assets/[^/]+-[A-Za-z0-9_-]{8,}\.(js|css)$`)
 
+// Only known UI routes fall back to the app shell; missing APIs/assets remain 404.
+func appRoute(path string) bool {
+	path = strings.TrimSuffix(path, "/")
+	for _, prefix := range []string{"panel", "admin"} {
+		if path == prefix {
+			path = "manage"
+		} else if strings.HasPrefix(path, prefix+"/") {
+			path = strings.TrimPrefix(path, prefix+"/")
+			if path != "login" {
+				path = "manage/" + path
+			}
+		}
+	}
+	switch path {
+	case "login", "manage", "manage/catalog", "manage/studio", "manage/support", "manage/student-life", "manage/leisure":
+		return true
+	}
+	return false
+}
+
 func Handler(check Checker, environment, static string) http.Handler {
 	return HandlerWithIdentity(check, environment, static, nil)
 }
@@ -76,7 +96,7 @@ func HandlerWithBot(check Checker, environment, static string, auth http.Handler
 				w.WriteHeader(http.StatusMethodNotAllowed)
 				return
 			}
-			path := strings.TrimPrefix(r.URL.Path, "/")
+			path := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/"), "/")
 			if path == "" {
 				path = "index.html"
 			}
@@ -94,7 +114,7 @@ func HandlerWithBot(check Checker, environment, static string, auth http.Handler
 				files.ServeHTTP(w, r)
 				return
 			}
-			if path == "login" || path == "manage" || path == "manage/catalog" || path == "manage/studio" || path == "manage/support" || path == "manage/student-life" || path == "manage/leisure" {
+			if appRoute(path) {
 				w.Header().Set("Cache-Control", "no-cache")
 				http.ServeFile(w, r, filepath.Join(static, "index.html"))
 				return

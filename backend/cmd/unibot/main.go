@@ -25,8 +25,11 @@ import (
 )
 
 func run() error {
-	mode := flag.String("mode", "api", "api, worker, sender, scheduler, seed-catalog, migrate, admin-bootstrap, admin-grant, import-bundled, bot-status, bot-prepare, bot-enable, bot-disable, admin-link or admin-add-telegram")
+	mode := flag.String("mode", "api", "api, healthcheck, worker, sender, scheduler, seed-catalog, migrate, admin-bootstrap, admin-grant, import-bundled, bot-status, bot-prepare, bot-enable, bot-disable, admin-link or admin-add-telegram")
 	flag.Parse()
+	if *mode == "healthcheck" {
+		return checkHealth(os.Getenv("HTTP_ADDR"))
+	}
 	if *mode != "api" && *mode != "worker" && *mode != "sender" && *mode != "scheduler" && *mode != "seed-catalog" && *mode != "migrate" && *mode != "admin-bootstrap" && *mode != "admin-grant" && !operatorMode(*mode) {
 		return errors.New("unknown mode")
 	}

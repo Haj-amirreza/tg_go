@@ -2,8 +2,10 @@
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useAuth } from "./stores/auth";
+import { useSystem } from "./stores/system";
 import { modules } from "./lib/modules";
 const auth = useAuth();
+const system = useSystem();
 const route = useRoute(),
   menu = ref(false),
   search = ref("");
@@ -94,8 +96,21 @@ const filtered = computed(() =>
         >
       </nav>
       <div class="sidebar-note">
-        <span class="status-dot"></span>محیط توسعه
-        <small>هیچ ربات عملیاتی متصل نیست</small>
+        <span class="status-dot"></span
+        >{{
+          system.status?.environment === "production"
+            ? "محیط عملیاتی"
+            : system.status
+              ? "محیط توسعه"
+              : "در حال بررسی اتصال"
+        }}
+        <small>{{
+          system.status
+            ? system.status.botConnected
+              ? "ربات در این نصب فعال است"
+              : "اتصال ربات در این نصب غیرفعال است"
+            : "وضعیت سرویس هنوز دریافت نشده"
+        }}</small>
       </div>
     </aside>
     <div class="main-shell">

@@ -43,7 +43,7 @@ func TestStaticDoesNotFallbackOnAPI(t *testing.T) {
 	for _, p := range []struct {
 		path string
 		code int
-	}{{"/", 200}, {"/login", 200}, {"/missing.js", 404}, {"/.env", 404}, {"/api/missing", 404}} {
+	}{{"/", 200}, {"/login", 200}, {"/panel", 200}, {"/admin", 200}, {"/admin/", 200}, {"/panel/catalog", 200}, {"/admin/login", 200}, {"/panel/support", 200}, {"/admin/.env", 404}, {"/panel/api", 404}, {"/admin/missing.js", 404}, {"/missing.js", 404}, {"/.env", 404}, {"/api/missing", 404}} {
 		r := httptest.NewRecorder()
 		h.ServeHTTP(r, httptest.NewRequest("GET", p.path, nil))
 		if r.Code != p.code {

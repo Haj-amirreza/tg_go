@@ -997,7 +997,7 @@ components:
       properties:
         service: { const: university-bot }
         stage: { const: 4 }
-        environment: { type: string, enum: [development, test] }
+        environment: { type: string, enum: [development, test, production] }
         databaseReady: { type: boolean }
         authenticationReady: { type: boolean }
-        botConnected: { const: false }
+        botConnected: { type: boolean }

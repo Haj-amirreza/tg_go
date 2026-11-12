@@ -10,6 +10,8 @@
 !database/
 !database/seed/
 !database/seed/university-books.jsonl.gz
+!database/seed/directory-safe.jsonl.gz
+!database/seed/bkatu_contacts_full.json
 
 !infra/
 !infra/next-private/

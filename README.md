@@ -10,6 +10,8 @@
 
 ## نصب
 
+**Coolify v4.7.5 و دامنهٔ bot.nymo.ir:** [تنظیمات پورت 8080، Dockerfile و مسیرهای /panel و /admin](docs/COOLIFY_FA.md). اگر Coolify پراکسی را اداره می‌کند، از همین راهنما استفاده کنید.
+
 [راهنمای نصب Ubuntu و اتصال Telegram](docs/UBUNTU_INSTALL_FA.md)
 
 ```bash
