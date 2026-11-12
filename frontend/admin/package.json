@@ -1,0 +1,29 @@
+{
+  "name": "university-bot-admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc --noEmit && vite build",
+    "generate:api": "openapi-typescript ../../contracts/openapi.yaml -o src/lib/api.generated.ts",
+    "check:api": "npm run generate:api && git diff --exit-code -- src/lib/api.generated.ts",
+    "format": "prettier --write src index.html vite.config.ts tsconfig.json package.json",
+    "check:format": "prettier --check src index.html vite.config.ts tsconfig.json package.json"
+  },
+  "dependencies": {
+    "pinia": "4.1.0",
+    "vue": "3.5.45",
+    "vue-router": "5.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.5",
+    "@vitejs/plugin-vue": "6.0.10",
+    "openapi-typescript": "7.13.0",
+    "prettier": "3.6.2",
+    "tailwindcss": "4.3.5",
+    "typescript": "5.9.3",
+    "vite": "8.3.6",
+    "vue-tsc": "3.3.14"
+  }
+}

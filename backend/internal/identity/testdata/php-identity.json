@@ -1,0 +1,8 @@
+{
+    "password": "synthetic-compatibility-only",
+    "bcrypt": "$2y$04$GrxL\/GTc0OF3D26Aw1LYkOsEw3jBtu5V.avgCzi4A2wWtCrhgqGMm",
+    "totp_secret": "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
+    "totp_counter": 59305680,
+    "totp_code": "880371",
+    "totp_encrypted": "QY3+UdHQI\/KQ0EhK7Ss5E7xUA6VyUFXwWgtU0xRnuG8QUk2ASIJ15JTcFu9eCvMzNoCkAjM5vusf3PFr"
+}

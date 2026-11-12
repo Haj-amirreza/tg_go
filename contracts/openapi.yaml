@@ -1,0 +1,1003 @@
+openapi: 3.1.0
+info:
+  title: University Bot Foundation API
+  version: 0.5.0
+  description: Go domain migration in progress; catalog, announcements and portable block studio. Production cutover remains gated.
+paths:
+  /healthz:
+    get:
+      operationId: liveness
+      responses:
+        '200':
+          description: Process is alive; this does not imply database readiness.
+          content:
+            application/json:
+              schema: { type: object, required: [status], properties: { status: { const: alive } } }
+  /readyz:
+    get:
+      operationId: readiness
+      responses:
+        '200': { description: Database reachable and foundation migration verified }
+        '503': { description: Database unavailable or foundation migration missing or changed }
+  /api/v1/system/status:
+    get:
+      operationId: systemStatus
+      responses:
+        '200':
+          description: Public foundation capabilities, without credentials or operational records
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SystemStatus' }
+  /api/v1/auth/csrf:
+    get:
+      operationId: loginCsrf
+      responses:
+        '200':
+          description: Sets HttpOnly pre-login cookie; token expires in 10 minutes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CSRF' }
+  /api/v1/auth/login:
+    post:
+      operationId: passwordLogin
+      parameters:
+        - { $ref: '#/components/parameters/CSRFToken' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { $ref: '#/components/responses/Denied' }
+        '403': { $ref: '#/components/responses/Denied' }
+        '429': { $ref: '#/components/responses/Denied' }
+        '503': { $ref: '#/components/responses/Denied' }
+  /api/v1/auth/telegram:
+    post:
+      operationId: telegramLogin
+      parameters:
+        - { $ref: '#/components/parameters/CSRFToken' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TelegramInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { $ref: '#/components/responses/Denied' }
+        '403': { $ref: '#/components/responses/Denied' }
+        '429': { $ref: '#/components/responses/Denied' }
+        '503': { $ref: '#/components/responses/Denied' }
+  /api/v1/admin/session:
+    get:
+      operationId: adminSession
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Session' }
+        '401': { $ref: '#/components/responses/Denied' }
+        '503': { $ref: '#/components/responses/Denied' }
+  /api/v1/admin/logout:
+    post:
+      operationId: adminLogout
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/CSRFToken' }
+      responses:
+        '200':
+          description: Session revoked in PostgreSQL and cookie expired.
+          content:
+            application/json:
+              schema: { type: object, required: [loggedOut], properties: { loggedOut: { const: true } } }
+        '401': { $ref: '#/components/responses/Denied' }
+        '403': { $ref: '#/components/responses/Denied' }
+  /api/v1/admin/roles:
+    get:
+      operationId: listVisibleRoles
+      description: Requires admins permission. Non-super actors see weaker roles only; read-only in this stage.
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: At most 100 visible roles; no password hashes or TOTP secrets.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Role' } }
+        '401': { $ref: '#/components/responses/Denied' }
+        '403': { $ref: '#/components/responses/Denied' }
+  /api/v1/admin/queue/jobs:
+    get:
+      operationId: listQueueJobs
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: after, in: query, schema: {type: string}}
+      responses:
+        '200':
+          description: Up to 20 jobs, keyset pagination, no payload or recipient. Requires queue permission.
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/QueueItem'}}
+        '403': {$ref: '#/components/responses/Denied'}
+  /api/v1/admin/queue/retry:
+    post:
+      operationId: retryDeadJob
+      security: [{cookieAuth: []}]
+      parameters: [{$ref: '#/components/parameters/CSRFToken'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, additionalProperties: false, required: [id], properties: {id: {type: string}}}
+      responses:
+        '200': {description: Dead job reset in an audited transaction}
+        '403': {$ref: '#/components/responses/Denied'}
+        '409': {description: Job not dead; uncertain deliveries cannot be automatically replayed}
+  /api/v1/admin/performance:
+    get:
+      operationId: performance
+      security: [{cookieAuth: []}]
+      responses:
+        '200':
+          description: Non-sensitive process counters and one-second queue aggregate; requires health permission.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Performance'}
+        '403': {$ref: '#/components/responses/Denied'}
+  /api/v1/admin/cache/clear:
+    post:
+      operationId: clearPublicCache
+      security: [{cookieAuth: []}]
+      parameters: [{$ref: '#/components/parameters/CSRFToken'}]
+      responses:
+        '200': {description: Public aggregate cache cleared; requires health permission}
+        '403': {$ref: '#/components/responses/Denied'}
+  /api/v1/admin/queue/control:
+    post:
+      operationId: pauseQueue
+      security: [{cookieAuth: []}]
+      parameters: [{$ref: '#/components/parameters/CSRFToken'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, additionalProperties: false, required: [paused], properties: {paused: {type: boolean}}}
+      responses:
+        '200': {description: Pause flag committed and audited; requires queue permission}
+        '403': {$ref: '#/components/responses/Denied'}
+  /api/v1/telegram/webhook:
+    post:
+      operationId: acceptUpdate
+      parameters:
+        - {name: X-Telegram-Bot-Api-Secret-Token, in: header, required: true, schema: {type: string, minLength: 32}}
+      responses:
+        '200': {description: Update and outbox committed, or already accepted}
+        '400': {description: Invalid JSON update identifier}
+        '403': {description: Invalid secret}
+        '413': {description: More than 1 MiB}
+        '503': {description: Disabled or durable storage unavailable}
+  /api/v1/admin/catalog:
+    get:
+      operationId: listCatalog
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: kind, in: query, required: true, schema: {type: string}}
+        - {name: page, in: query, schema: {type: integer, minimum: 0}}
+      responses:
+        '200':
+          description: Up to 20 records; requires content permission.
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/Content'}}
+  /api/v1/admin/catalog/save:
+    post:
+      operationId: saveCatalog
+      security: [{cookieAuth: []}]
+      parameters: [{$ref: '#/components/parameters/CSRFToken'}, {$ref: '#/components/parameters/CommandKey'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Content'}
+      responses:
+        '200':
+          description: Committed version, including idempotent replay. Published changes require publish permission.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Content'}
+        '409': {$ref: '#/components/responses/Denied'}
+  /api/v1/admin/catalog/archive:
+    post:
+      operationId: archiveCatalog
+      security: [{cookieAuth: []}]
+      parameters: [{$ref: '#/components/parameters/CSRFToken'}, {$ref: '#/components/parameters/CommandKey'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [items], properties: {items: {type: array, minItems: 1, maxItems: 100, items: {type: object, required: [id, version], properties: {id: {type: string}, version: {type: integer}}}}}}
+      responses:
+        '200': {description: Atomic archive; IDs and revisions retained.}
+  /api/v1/admin/books:
+    get:
+      operationId: listBooks
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: query, in: query, schema: {type: string}}
+        - {name: category, in: query, schema: {type: string}}
+        - {name: page, in: query, schema: {type: integer}}
+      responses:
+        '200':
+          description: At most 10 books, with normalized Persian AND search.
+          content:
+            application/json:
+              schema: {type: object, required: [rows, page, pages, total], properties: {rows: {type: array, items: {$ref: '#/components/schemas/Book'}}, page: {type: integer}, pages: {type: integer}, total: {type: integer}}}
+  /api/v1/admin/books/save:
+    post:
+      operationId: saveBook
+      security: [{cookieAuth: []}]
+      parameters: [{$ref: '#/components/parameters/CSRFToken'}, {$ref: '#/components/parameters/CommandKey'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Book'}
+      responses:
+        '200':
+          description: Book committed with optimistic revision check.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Book'}
+  /api/v1/admin/books/archive:
+    post:
+      operationId: archiveBooks
+      security: [{cookieAuth: []}]
+      parameters: [{$ref: '#/components/parameters/CSRFToken'}, {$ref: '#/components/parameters/CommandKey'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [items], properties: {items: {type: array, items: {type: object, required: [id, revision], properties: {id: {type: string}, revision: {type: integer}}}}}}
+      responses:
+        '200': {description: Soft deletion of selected books; source keys retained.}
+  /api/v1/admin/books/categories:
+    get:
+      operationId: bookCategories
+      security: [{cookieAuth: []}]
+      responses:
+        '200':
+          description: Ten stable categories.
+          content:
+            application/json:
+              schema: {type: array, items: {type: object, required: [id, name], properties: {id: {type: string}, name: {type: string}}}}
+  /api/v1/admin/studio:
+    get:
+      operationId: getStudio
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          pattern: ^[1-9][0-9]*$
+      responses:
+        '200':
+          description: Role-checked private domain result; no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/v1/admin/studio/templates:
+    get:
+      operationId: listStudioTemplates
+      security:
+      - cookieAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: Role-checked private domain result; no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/v1/admin/notices/categories:
+    get:
+      operationId: listNoticeCategories
+      security:
+      - cookieAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: Role-checked private domain result; no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/v1/admin/notices/preview:
+    get:
+      operationId: previewNoticeAudience
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          pattern: ^[1-9][0-9]*$
+      - name: mode
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - bank
+          - all
+          - followers
+      responses:
+        '200':
+          description: Role-checked private domain result; no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/v1/admin/notices/dispatches:
+    get:
+      operationId: listNoticeDispatches
+      security:
+      - cookieAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: Role-checked private domain result; no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/v1/admin/files/media:
+    get:
+      operationId: privateMedia
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+          pattern: ^[1-9][0-9]*$
+      responses:
+        '200':
+          description: Role-checked private domain result; no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/v1/admin/studio/save:
+    post:
+      operationId: saveStudio
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic, idempotent command result
+        '400':
+          description: Invalid fields, unsupported media or audience above 1500
+        '409':
+          description: Stale revision, changed audience or duplicate dispatch
+  /api/v1/admin/studio/template:
+    post:
+      operationId: saveStudioTemplate
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic, idempotent command result
+        '400':
+          description: Invalid fields, unsupported media or audience above 1500
+        '409':
+          description: Stale revision, changed audience or duplicate dispatch
+  /api/v1/admin/studio/template/delete:
+    post:
+      operationId: deleteStudioTemplate
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic, idempotent command result
+        '400':
+          description: Invalid fields, unsupported media or audience above 1500
+        '409':
+          description: Stale revision, changed audience or duplicate dispatch
+  /api/v1/admin/notices/category:
+    post:
+      operationId: saveNoticeCategory
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic, idempotent command result
+        '400':
+          description: Invalid fields, unsupported media or audience above 1500
+        '409':
+          description: Stale revision, changed audience or duplicate dispatch
+  /api/v1/admin/notices/dispatch:
+    post:
+      operationId: dispatchNotice
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic, idempotent command result
+        '400':
+          description: Invalid fields, unsupported media or audience above 1500
+        '409':
+          description: Stale revision, changed audience or duplicate dispatch
+  /api/v1/admin/notices/cancel:
+    post:
+      operationId: cancelNoticeDispatch
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic, idempotent command result
+        '400':
+          description: Invalid fields, unsupported media or audience above 1500
+        '409':
+          description: Stale revision, changed audience or duplicate dispatch
+  /api/v1/admin/files/upload:
+    post:
+      operationId: uploadPrivateMedia
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Private file ID and verified MIME, max 20 MiB
+        '413':
+          description: Too large
+        '403':
+          description: Files permission and CSRF required
+
+  /api/v1/admin/tickets:
+    get:
+      operationId: listSupportTickets
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 10000
+      - name: state
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Private role-checked result; at most 11 rows (10 plus next-page
+            sentinel), or 5 thread messages. Verification details require users permission.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: true
+                - type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+        '403':
+          description: Required domain permission missing
+  /api/v1/admin/tickets/thread:
+    get:
+      operationId: getSupportThread
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 10000
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Private role-checked result; at most 11 rows (10 plus next-page
+            sentinel), or 5 thread messages. Verification details require users permission.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: true
+                - type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+        '403':
+          description: Required domain permission missing
+  /api/v1/admin/tickets/assignees:
+    get:
+      operationId: listSupportAssignees
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 10000
+      responses:
+        '200':
+          description: Private role-checked result; at most 11 rows (10 plus next-page
+            sentinel), or 5 thread messages. Verification details require users permission.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: true
+                - type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+        '403':
+          description: Required domain permission missing
+  /api/v1/admin/community:
+    get:
+      operationId: listStudentCommunity
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 10000
+      - name: kind
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - channels
+          - market
+          - lost
+          - found
+      - name: state
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Private role-checked result; at most 11 rows (10 plus next-page
+            sentinel), or 5 thread messages. Verification details require users permission.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: true
+                - type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+        '403':
+          description: Required domain permission missing
+  /api/v1/admin/leisure:
+    get:
+      operationId: getLeisureCatalog
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 10000
+      responses:
+        '200':
+          description: Private role-checked result; at most 11 rows (10 plus next-page
+            sentinel), or 5 thread messages. Verification details require users permission.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: true
+                - type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+        '403':
+          description: Required domain permission missing
+  /api/v1/admin/verifications:
+    get:
+      operationId: listStudentVerifications
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 10000
+      responses:
+        '200':
+          description: Private role-checked result; at most 11 rows (10 plus next-page
+            sentinel), or 5 thread messages. Verification details require users permission.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: true
+                - type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+        '403':
+          description: Required domain permission missing
+  /api/v1/admin/tickets/reply:
+    post:
+      operationId: replyToSupportTicket
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic idempotent mutation; revisions checked; notifications
+            commit with outbox
+        '400':
+          description: Invalid fields, missing consent or unverified student
+        '403':
+          description: Required domain permission missing
+        '409':
+          description: Revision changed; refresh before editing
+  /api/v1/admin/community/save:
+    post:
+      operationId: saveStudentCommunity
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic idempotent mutation; revisions checked; notifications
+            commit with outbox
+        '400':
+          description: Invalid fields, missing consent or unverified student
+        '403':
+          description: Required domain permission missing
+        '409':
+          description: Revision changed; refresh before editing
+  /api/v1/admin/community/archive:
+    post:
+      operationId: archiveStudentCommunity
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic idempotent mutation; revisions checked; notifications
+            commit with outbox
+        '400':
+          description: Invalid fields, missing consent or unverified student
+        '403':
+          description: Required domain permission missing
+        '409':
+          description: Revision changed; refresh before editing
+  /api/v1/admin/leisure/save:
+    post:
+      operationId: saveLeisureRecord
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic idempotent mutation; revisions checked; notifications
+            commit with outbox
+        '400':
+          description: Invalid fields, missing consent or unverified student
+        '403':
+          description: Required domain permission missing
+        '409':
+          description: Revision changed; refresh before editing
+  /api/v1/admin/leisure/archive:
+    post:
+      operationId: archiveLeisureSelection
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic idempotent mutation; revisions checked; notifications
+            commit with outbox
+        '400':
+          description: Invalid fields, missing consent or unverified student
+        '403':
+          description: Required domain permission missing
+        '409':
+          description: Revision changed; refresh before editing
+  /api/v1/admin/verifications/review:
+    post:
+      operationId: reviewStudentVerification
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CSRFToken'
+      - $ref: '#/components/parameters/CommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Atomic idempotent mutation; revisions checked; notifications
+            commit with outbox
+        '400':
+          description: Invalid fields, missing consent or unverified student
+        '403':
+          description: Required domain permission missing
+        '409':
+          description: Revision changed; refresh before editing
+components:
+  securitySchemes:
+    cookieAuth: { type: apiKey, in: cookie, name: unibot_session }
+  parameters:
+    CommandKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 16, maxLength: 64}}
+    CSRFToken: { name: X-CSRF-Token, in: header, required: true, schema: { type: string } }
+  responses:
+    Session:
+      description: Current identity and CSRF token. Bearer remains in HttpOnly cookie.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Actor' }
+    Denied:
+      description: Generic denial, throttling or service unavailable; does not reveal whether the account exists.
+      content:
+        application/json:
+          schema: { type: object, required: [code], properties: { code: { type: string } } }
+  schemas:
+    Content:
+      type: object
+      required: [id, kind, title, body, metadata, status, version, publishedAt, expiresAt]
+      properties:
+        id: {type: string}
+        kind: {type: string}
+        title: {type: string, minLength: 1, maxLength: 200}
+        body: {type: string, maxLength: 30000}
+        metadata: {type: object, additionalProperties: true}
+        status: {type: string, enum: [draft, pending, published, archived]}
+        version: {type: integer}
+        publishedAt: {type: [integer, 'null']}
+        expiresAt: {type: [integer, 'null']}
+    Book:
+      type: object
+      required: [id, title, details, category, revision]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        details: {type: object, additionalProperties: true}
+        category: {type: string}
+        revision: {type: integer}
+    QueueItem:
+      type: object
+      required: [id, kind, state, attempts, error]
+      properties:
+        id: {type: string}
+        kind: {type: string}
+        state: {type: string}
+        attempts: {type: integer}
+        error: {type: [string, 'null']}
+    Performance:
+      type: object
+      required: [queue, database, pool, cache, heapBytes, goroutines, queueSnapshotSeconds]
+      properties:
+        queue: {type: object, additionalProperties: {type: integer}}
+        database: {type: object, additionalProperties: {type: integer}}
+        pool: {type: object, additionalProperties: {type: integer}}
+        cache:
+          type: object
+          required: [hits, misses, entries, bytes]
+          properties:
+            hits: {type: integer}
+            misses: {type: integer}
+            entries: {type: integer}
+            bytes: {type: integer}
+        cpuMicros: {type: integer, description: Cumulative process user plus system CPU microseconds; Linux runtime.}
+        heapBytes: {type: integer}
+        goroutines: {type: integer}
+        queueSnapshotSeconds: {type: integer}
+    CSRF:
+      type: object
+      required: [csrf]
+      properties:
+        csrf: { type: string }
+    LoginInput:
+      type: object
+      additionalProperties: false
+      required: [username, password, otp]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 80 }
+        password: { type: string, minLength: 1, maxLength: 72 }
+        otp: { type: string, description: Six ASCII digits when TOTP is enabled; otherwise empty. }
+    TelegramInput:
+      type: object
+      additionalProperties: false
+      required: [grant, initData, otp]
+      properties:
+        grant: { type: string, pattern: '^[a-f0-9]{64}$' }
+        initData: { type: string, maxLength: 16384 }
+        otp: { type: string }
+    Actor:
+      type: object
+      additionalProperties: false
+      required: [id, username, name, role, level, super, permissions, csrf]
+      properties:
+        id: { type: string, pattern: '^[1-9][0-9]*$' }
+        username: { type: string }
+        name: { type: string }
+        role: { type: string }
+        level: { type: integer }
+        super: { type: boolean }
+        permissions: { type: array, items: { type: string } }
+        csrf: { type: string }
+    Role:
+      type: object
+      required: [id, name, level, permissions]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        level: { type: integer }
+        permissions: { type: array, items: { type: string } }
+
+    SystemStatus:
+      type: object
+      additionalProperties: false
+      required: [service, stage, environment, databaseReady, authenticationReady, botConnected]
+      properties:
+        service: { const: university-bot }
+        stage: { const: 4 }
+        environment: { type: string, enum: [development, test] }
+        databaseReady: { type: boolean }
+        authenticationReady: { type: boolean }
+        botConnected: { const: false }

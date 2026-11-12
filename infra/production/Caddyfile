@@ -1,0 +1,24 @@
+{
+	admin off
+	http_port 8080
+	https_port 8443
+	auto_https disable_redirects
+}
+
+# The host publishes 80 -> 8080 and 443 -> 8443. Always advertise external 443.
+http://{$APP_DOMAIN}:8080 {
+	redir https://{$APP_DOMAIN}{uri} 308
+}
+
+https://{$APP_DOMAIN}:8443 {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	# Web-only release never accepts Telegram updates, including at the edge.
+	@telegram path /api/v1/telegram/*
+	respond @telegram 404
+	reverse_proxy api:8080 {
+		health_uri /readyz
+		health_interval 15s
+		health_timeout 3s
+	}
+}

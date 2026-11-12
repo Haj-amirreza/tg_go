@@ -1,0 +1,16 @@
+**
+!backend/
+!backend/bin/
+!backend/bin/unibot
+!frontend/
+!frontend/admin/
+!frontend/admin/dist/
+!frontend/admin/dist/**
+
+!database/
+!database/seed/
+!database/seed/university-books.jsonl.gz
+
+!infra/
+!infra/next-private/
+!infra/next-private/.keep

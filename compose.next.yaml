@@ -1,0 +1,84 @@
+name: unibot-next
+x-app: &app
+  image: unibot-next:foundation
+  build:
+    context: .
+    dockerfile: Dockerfile.next
+  environment: &app-env
+    APP_ENV: development
+    DATABASE_URL: postgres://unibot_app:${APP_DB_PASSWORD:?generate private development env}@db:5432/unibot_dev?sslmode=disable
+    DB_POOL_MAX: '8'
+    APP_KEY: ${APP_KEY:?generate or upgrade private development env}
+    APP_ORIGIN: ${APP_ORIGIN:-http://127.0.0.1:8080}
+    TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+    TELEGRAM_RICH_ENABLED: ${TELEGRAM_RICH_ENABLED:-false}
+    TELEGRAM_SEND_ENABLED: ${TELEGRAM_SEND_ENABLED:-false}
+    PRIVATE_FILE_DIR: /files
+    TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+    PUBLIC_CACHE_DIR: ${PUBLIC_CACHE_DIR:-}
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  restart: unless-stopped
+  stop_grace_period: 15s
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+services:
+  db:
+    image: postgres:18@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: unibot_dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?generate private development env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?generate private development env}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./infra/postgres/10-runtime.sh:/docker-entrypoint-initdb.d/10-runtime.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d unibot_dev']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  migrate:
+    <<: *app
+    command: [-mode, migrate]
+    restart: 'no'
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?generate private development env}@db:5432/unibot_dev?sslmode=disable
+    depends_on:
+      db: {condition: service_healthy}
+  api:
+    <<: *app
+    command: [-mode, api]
+    volumes: [private_files:/files]
+    ports: ['127.0.0.1:${NEXT_HTTP_PORT:-8080}:8080']
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  worker:
+    <<: *app
+    command: [-mode, worker]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  sender:
+    <<: *app
+    profiles: [delivery]
+    command: [-mode, sender]
+    volumes: [private_files:/files]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  scheduler:
+    <<: *app
+    command: [-mode, scheduler]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+volumes:
+  postgres_data:
+  private_files:

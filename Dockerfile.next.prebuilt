@@ -1,0 +1,16 @@
+# syntax=docker/dockerfile:1
+# Low-disk/CI path: compile verified artifacts first (see docs/GO_VUE_FOUNDATION_FA.md).
+FROM node:24.22.1-alpine AS trust
+RUN node -e "require('node:fs').writeFileSync('/roots.pem',require('node:tls').rootCertificates.join('\\n')+'\\n')"
+FROM scratch
+COPY --from=trust /roots.pem /etc/ssl/certs/ca-certificates.crt
+COPY --chmod=0555 backend/bin/unibot /unibot
+COPY frontend/admin/dist/ /web/
+COPY --chmod=0444 database/seed/university-books.jsonl.gz /database/seed/university-books.jsonl.gz
+COPY --chmod=0444 database/seed/directory-safe.jsonl.gz /database/seed/directory-safe.jsonl.gz
+COPY --chmod=0444 database/seed/bkatu_contacts_full.json /database/seed/bkatu_contacts_full.json
+COPY --chown=65532:65532 --chmod=0700 infra/next-private /files
+USER 65532:65532
+ENV HTTP_ADDR=0.0.0.0:8080 STATIC_DIR=/web
+EXPOSE 8080
+ENTRYPOINT ["/unibot"]

@@ -1,0 +1,17 @@
+node_modules
+**/dist/
+backend/bin/
+.env
+.env.*
+*.log
+*.private.json
+*.inventory.private.json
+*.dump
+*.backup
+*.zip
+__pycache__/
+*.pyc
+tests/runtime/
+/migration-private/
+web.env
+bot.env

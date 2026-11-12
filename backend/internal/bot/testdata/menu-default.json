@@ -1,0 +1,236 @@
+{
+    "revision": 0,
+    "columns": 2,
+    "layout_version": 3,
+    "buttons": [
+        {
+            "id": "announcements",
+            "label": "اخبار و اطلاعیه‌ها",
+            "action": "u:news",
+            "value": "",
+            "enabled": true,
+            "sort": 0,
+            "aliases": [
+                "اطلاعیه‌ها",
+                "اخبار دانشگاه"
+            ],
+            "parent_id": null
+        },
+        {
+            "id": "professors",
+            "label": "استادشناسی",
+            "action": "u:people:professors:0",
+            "value": "",
+            "enabled": true,
+            "sort": 0,
+            "aliases": [
+                "استادان",
+                "استادشناسی"
+            ],
+            "parent_id": "contacts",
+            "row_width": "auto"
+        },
+        {
+            "id": "contacts",
+            "label": "شماره‌ها و اساتید",
+            "action": "u:people:contacts:0",
+            "value": "",
+            "enabled": true,
+            "sort": 10,
+            "aliases": [
+                "اطلاعات تماس",
+                "شناسه‌ها"
+            ],
+            "parent_id": null,
+            "row_width": "full"
+        },
+        {
+            "id": "links",
+            "label": "گروه‌ها و کانال‌ها",
+            "action": "u:links",
+            "value": "",
+            "enabled": true,
+            "sort": 30,
+            "aliases": [
+                "گروه‌ها و کانال‌ها"
+            ],
+            "parent_id": null,
+            "style": "success"
+        },
+        {
+            "id": "guides",
+            "label": "سامانه‌ها",
+            "action": "u:systems",
+            "value": "",
+            "enabled": true,
+            "sort": 40,
+            "aliases": [
+                "راهنمای سامانه‌ها"
+            ],
+            "parent_id": null,
+            "style": "success"
+        },
+        {
+            "id": "resources",
+            "label": "کتابخانه",
+            "action": "u:library",
+            "value": "",
+            "enabled": true,
+            "sort": 50,
+            "aliases": [
+                "کتابخانه",
+                "فرمول‌نامه",
+                "جست‌وجوی کتابخانه"
+            ],
+            "parent_id": null,
+            "style": "success"
+        },
+        {
+            "id": "market",
+            "label": "بازارچه دانشجویی",
+            "action": "market",
+            "value": "",
+            "enabled": true,
+            "sort": 20,
+            "aliases": [
+                "بازارچه دانشجویی"
+            ],
+            "parent_id": "personal",
+            "style": "success"
+        },
+        {
+            "id": "lostfound",
+            "label": "گمشده‌ها",
+            "action": "lostfound",
+            "value": "",
+            "enabled": true,
+            "sort": 30,
+            "aliases": [],
+            "parent_id": "personal",
+            "style": "default"
+        },
+        {
+            "id": "personal",
+            "label": "شخصی",
+            "action": "u:personal",
+            "value": "",
+            "enabled": true,
+            "sort": 80,
+            "aliases": [
+                "علاقه‌مندی‌ها"
+            ],
+            "parent_id": null,
+            "style": "success"
+        },
+        {
+            "id": "faq",
+            "label": "پرسش‌های متداول",
+            "action": "u:faq",
+            "value": "",
+            "enabled": true,
+            "sort": 20,
+            "aliases": [
+                "پرسش‌های متداول"
+            ],
+            "parent_id": "ruleshelp"
+        },
+        {
+            "id": "ruleshelp",
+            "label": "قوانین، راهنما و پرسش‌های متداول",
+            "action": "submenu",
+            "value": "",
+            "enabled": true,
+            "sort": 100,
+            "aliases": [
+                "قوانین و راهنما",
+                "قوانین",
+                "راهنما",
+                "پرسش‌های متداول"
+            ],
+            "parent_id": null,
+            "legacy_route": "u:rules"
+        },
+        {
+            "id": "support",
+            "label": "پشتیبانی",
+            "action": "support",
+            "value": "",
+            "enabled": true,
+            "sort": 110,
+            "aliases": [
+                "پشتیبانی و تیکت"
+            ],
+            "parent_id": null,
+            "style": "danger"
+        },
+        {
+            "label": "قوانین",
+            "action": "rules",
+            "value": "",
+            "id": "nav_3fc6cb96fb17e3699a67f15d",
+            "parent_id": "ruleshelp",
+            "aliases": [],
+            "enabled": true,
+            "sort": 0,
+            "generated": true
+        },
+        {
+            "label": "راهنما",
+            "action": "help",
+            "value": "",
+            "id": "nav_3f25f5d47b115d85a54c69a9",
+            "parent_id": "ruleshelp",
+            "aliases": [],
+            "enabled": true,
+            "sort": 10,
+            "generated": true
+        },
+        {
+            "id": "leisure",
+            "label": "تفریح",
+            "action": "fun:home",
+            "value": "",
+            "enabled": true,
+            "sort": 10,
+            "aliases": [],
+            "parent_id": "personal",
+            "style": "primary"
+        },
+        {
+            "id": "studentchannels",
+            "label": "معرفی کانال دانشجویان",
+            "action": "fun:channels",
+            "value": "",
+            "enabled": true,
+            "sort": 0,
+            "aliases": [],
+            "parent_id": "personal",
+            "style": "success"
+        },
+        {
+            "id": "adminconsole",
+            "label": "منوی مدیر",
+            "action": "ac:home",
+            "value": "",
+            "enabled": true,
+            "sort": 9990,
+            "aliases": [
+                "منوی مدیر",
+                "مدیریت ربات"
+            ],
+            "parent_id": null,
+            "system": true
+        }
+    ],
+    "retired_routes": [],
+    "smart_layout": true,
+    "display": "reply",
+    "navigation_version": 1,
+    "people_layout_version": 1,
+    "people_position_version": 1,
+    "leisure_version": 1,
+    "personal_hub_version": 1,
+    "people_merge_version": 1,
+    "admin_menu_label_version": 1,
+    "color_palette_version": 1
+}

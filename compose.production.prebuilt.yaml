@@ -1,0 +1,5 @@
+# Optional overlay for previously built, same-architecture Linux artifacts.
+services:
+  api:
+    build:
+      dockerfile: Dockerfile.next.prebuilt

@@ -1,0 +1,7 @@
+{
+    "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "nonce_hex": "101112131415161718191a1b",
+    "plaintext": "{\"عنوان\":\"سلام دانشگاه\",\"email\":\"synthetic@example.test\",\"symbols\":\"<>&\/\",\"ids\":[\"9223372036854775807\"],\"empty\":\"\",\"null\":null}",
+    "php_ciphertext": "EBESExQVFhcYGRobsTbA7v9TZHh+ruokUj2W6wbcQK+QT+M7EtLRmy1DS4tkicrWvBvSkT9WOsCH0oxvikaPpCwhTMNcU\/8w4\/QxITHPPh2X4zyG1X16VIv2yRtpnRFXLM1\/FkGiRoe1o4fSTpuoj1qjdBWi3AJ2ivfBLycld4SAmUimXDniRVRI5qVi\/9AW352k05SbtpMLy9ohv+HoBBiXrY9Vjeim0KU5",
+    "php_hmac": "ae10fad1272b8f48a2e87caf4f4445901960b804e5ccc673bfeeea854049c12c"
+}

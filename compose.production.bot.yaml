@@ -1,0 +1,62 @@
+# Merge only after compose.production.yaml; credentials are read from two private env files.
+x-bot-env: &bot-env
+    APP_ENV: production
+    RELEASE_MODE: bot
+    APP_KEY: ${APP_KEY:?private web config required}
+    APP_ORIGIN: ${APP_ORIGIN:?private web config required}
+    PRIVATE_FILE_DIR: /files
+    TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?prepare bot config first}
+    TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:?prepare bot config first}
+    TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?prepare bot config first}
+    TELEGRAM_SEND_ENABLED: 'false'
+    TELEGRAM_RICH_ENABLED: 'false'
+    DATABASE_URL: postgres://unibot_app:${APP_DB_PASSWORD:?private web config required}@db:5432/unibot_web?sslmode=disable
+    DB_POOL_MAX: '4'
+x-bot-worker: &bot-worker
+  image: ${APP_IMAGE:?private web config required}
+  read_only: true
+  user: '65532:65532'
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  restart: unless-stopped
+  stop_grace_period: 20s
+  pids_limit: 64
+  mem_limit: 256m
+  cpus: 0.75
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+  environment: *bot-env
+  networks: [database, web]
+  depends_on:
+    db: {condition: service_healthy}
+services:
+  api:
+    environment:
+      <<: *bot-env
+      DB_POOL_MAX: '6'
+  scheduler:
+    environment:
+      <<: *bot-env
+      DB_POOL_MAX: '2'
+  migrate:
+    environment:
+      <<: *bot-env
+      DB_POOL_MAX: '2'
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?private web config required}@db:5432/unibot_web?sslmode=disable
+  worker:
+    <<: *bot-worker
+    command: [-mode, worker]
+  sender:
+    <<: *bot-worker
+    command: [-mode, sender]
+    mem_limit: 256m
+    environment:
+      <<: *bot-env
+      DB_POOL_MAX: '2'
+      TELEGRAM_SEND_ENABLED: 'true'
+    volumes: [private_files:/files]
+  caddy:
+    volumes:
+      - ./infra/production/Caddyfile.bot:/etc/caddy/Caddyfile:ro

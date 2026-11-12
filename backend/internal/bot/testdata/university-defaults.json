@@ -1,0 +1,34 @@
+{
+    "systems": {
+        "golestan": "سامانه گلستان",
+        "food": "سامانه تغذیه",
+        "elearning": "سامانه آموزش مجازی",
+        "sajjad": "سامانه سجاد",
+        "welfare": "سامانه صندوق رفاه",
+        "culture": "سامانه فرهنگی",
+        "other": "سایر"
+    },
+    "categories": {
+        "science": "انجمن‌های علمی",
+        "culture": "کانون‌های فرهنگی",
+        "organizations": "تشکل‌ها",
+        "information": "اطلاع‌رسانی",
+        "courses": "درسی"
+    },
+    "system_order": [
+        "golestan",
+        "food",
+        "elearning",
+        "sajjad",
+        "welfare",
+        "culture",
+        "other"
+    ],
+    "category_order": [
+        "science",
+        "culture",
+        "organizations",
+        "information",
+        "courses"
+    ]
+}

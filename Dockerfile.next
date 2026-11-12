@@ -1,0 +1,36 @@
+# syntax=docker/dockerfile:1
+# Source bind mounts avoid persisting node_modules/compiler caches in intermediate layers.
+FROM node:24.22.1-alpine AS frontend
+RUN --mount=type=bind,source=frontend/admin,target=/source/frontend,readonly \
+    --mount=type=bind,source=public/assets/fonts,target=/source/fonts,readonly \
+    --mount=type=secret,id=proxy_ca,required=false \
+    set -eu; \
+    if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi; \
+    mkdir -p /tmp/project/frontend/admin /tmp/project/public/assets/fonts /out; \
+    cp -R /source/frontend/. /tmp/project/frontend/admin/; \
+    cp -R /source/fonts/. /tmp/project/public/assets/fonts/; \
+    cd /tmp/project/frontend/admin; \
+    npm ci --strict-ssl=true --cache /tmp/npm-cache; \
+    npm run build; cp -R dist /out/web; rm -rf /tmp/project /tmp/npm-cache
+FROM golang:1.27.4-alpine AS backend
+RUN --mount=type=bind,source=backend,target=/source/backend,readonly \
+    --mount=type=bind,from=frontend,source=/out/web,target=/source/web,readonly \
+    --mount=type=secret,id=proxy_ca,required=false \
+    set -eu; \
+    if [ -f /run/secrets/proxy_ca ]; then export SSL_CERT_FILE=/run/secrets/proxy_ca; fi; \
+    export GOMODCACHE=/tmp/go-mod GOCACHE=/tmp/go-cache; \
+    mkdir -p /tmp/project /out; cp -R /source/backend/. /tmp/project/; cd /tmp/project; \
+    go mod download; CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/unibot ./cmd/unibot; \
+    rm -rf /tmp/project /tmp/go-mod /tmp/go-cache
+FROM scratch
+COPY --from=backend /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --chmod=0555 --from=backend /out/unibot /unibot
+COPY --from=frontend /out/web/ /web/
+COPY --chmod=0444 database/seed/university-books.jsonl.gz /database/seed/university-books.jsonl.gz
+COPY --chmod=0444 database/seed/directory-safe.jsonl.gz /database/seed/directory-safe.jsonl.gz
+COPY --chmod=0444 database/seed/bkatu_contacts_full.json /database/seed/bkatu_contacts_full.json
+COPY --chown=65532:65532 --chmod=0700 infra/next-private /files
+USER 65532:65532
+ENV HTTP_ADDR=0.0.0.0:8080 STATIC_DIR=/web
+EXPOSE 8080
+ENTRYPOINT ["/unibot"]

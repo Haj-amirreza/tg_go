@@ -1,0 +1,17 @@
+.git
+.env
+**/.env
+config/
+storage/
+tests/runtime/
+migration-private/
+**/node_modules
+**/dist
+**/*.inventory.private.json
+**/*.log
+
+.env*
+**/.env*
+backend/bin/
+**/__pycache__
+**/*.pyc
